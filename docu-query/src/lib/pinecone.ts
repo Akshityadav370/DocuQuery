@@ -1,17 +1,19 @@
-import { Pinecone } from "@pinecone-database/pinecone";
+import { Pinecone, PineconeRecord } from "@pinecone-database/pinecone";
 import { downloadFromS3 } from "./s3-server";
 import { PDFLoader } from "langchain/document_loaders/fs/pdf";
+import md5 from "md5";
 import {
   Document,
   RecursiveCharacterTextSplitter,
 } from "@pinecone-database/doc-splitter";
+import { getEmbeddings } from "./embeddings";
 
 let pinecone: Pinecone | null = null;
 
 export const getPineconeClient = async () => {
   if (!pinecone) {
     pinecone = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY!,
+      apiKey: process.env.PINECONE_API_KEY!, // *
     });
   }
   return pinecone;
@@ -36,8 +38,31 @@ export async function loadS3IntoPinecone(fileKey: string) {
 
   // 2. Split & Segment the pdf into smaller documents
   // pages = Array(13)
-  const documents = await Promise.all(pages.map(prepareDocument));
+  const documents = await Promise.all(pages.map(prepareDocuments));
   // documents = Array(1000)
+
+  // 3. Vectorize & embed individual documents
+  const vectors = await Promise.all(documents.flat().map(embedDocument));
+}
+
+async function embedDocument(doc: Document) {
+  try {
+    const embeddings = await getEmbeddings(doc.pageContent);
+    // ID the vector within the PineCone
+    const hash = md5(doc.pageContent);
+
+    return {
+      id: hash,
+      values: embeddings,
+      metadata: {
+        text: doc.metadata.text,
+        pageNumber: doc.metadata.pageNumber, // *
+      },
+    } as PineconeRecord;
+  } catch (error) {
+    console.log("error in embedding the document", error);
+    throw error;
+  }
 }
 
 export const truncateStringByBytes = (str: string, bytes: number) => {
@@ -45,7 +70,7 @@ export const truncateStringByBytes = (str: string, bytes: number) => {
   return new TextDecoder("utf-8").decode(enc.encode(str).slice(0, bytes));
 };
 
-async function prepareDocument(page: PDFPage) {
+async function prepareDocuments(page: PDFPage) {
   let { pageContent, metadata } = page;
   // replace new line with empty string
   pageContent = pageContent.replace(/\n/g, "");
