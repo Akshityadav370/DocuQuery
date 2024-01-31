@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import ChatSideBar from "@/components/ChatSideBar";
 import PDFViewer from "@/components/PDFViewer";
+import ChatComponent from "@/components/ChatComponent";
 
 type Props = {
   params: {
@@ -39,7 +40,7 @@ const ChatPage = async ({ params: { chatId } }: Props) => {
         </div>
         {/* chat component */}
         <div className="flex-[3] border-l-4 border-l-slate-200 ">
-          {/* <ChatComponent/> */}
+          <ChatComponent />
         </div>
       </div>
     </div>
