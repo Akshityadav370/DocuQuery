@@ -7,6 +7,7 @@ import {
   RecursiveCharacterTextSplitter,
 } from "@pinecone-database/doc-splitter";
 import { getEmbeddings } from "./embeddings";
+import { convertToAscii } from "./utils";
 
 let pinecone: Pinecone | null = null;
 
@@ -14,6 +15,7 @@ export const getPineconeClient = async () => {
   if (!pinecone) {
     pinecone = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY!, // *
+      // environment: process.env.PINECONE_ENVIRONMENT!,
     });
   }
   return pinecone;
@@ -36,13 +38,37 @@ export async function loadS3IntoPinecone(fileKey: string) {
   const loader = new PDFLoader(file_name);
   const pages = (await loader.load()) as PDFPage[];
 
+  console.log("Starting step2, step1 completed");
   // 2. Split & Segment the pdf into smaller documents
   // pages = Array(13)
   const documents = await Promise.all(pages.map(prepareDocuments));
   // documents = Array(1000)
 
+  console.log("Starting step3, step2 completed");
   // 3. Vectorize & embed individual documents
   const vectors = await Promise.all(documents.flat().map(embedDocument));
+
+  console.log("Starting step4, step3 completed");
+  // 4. Upload to Pinecone
+  const client = await getPineconeClient();
+  const pineconeIndex = client.Index("docu-query");
+
+  console.log("Inserting vectors into pinecone");
+  // Different namespace will be present for each document
+  // File Key needs to be in all ASCII characters
+  // const namespace = convertToAscii(fileKey);
+  const request = vectors;
+  await pineconeIndex.upsert(request);
+  console.log("Vectors:", vectors);
+  console.log("Inserted vectors into pinecone");
+
+  return documents[0];
+  // const namespace = pineconeIndex.namespace(convertToAscii(fileKey));
+  // await namespace.upsert(vectors);
+  // console.log(documents, "docsss");
+  // console.log("Inserted vectors into pinecone");
+
+  // return documents[0];
 }
 
 async function embedDocument(doc: Document) {
@@ -85,5 +111,6 @@ async function prepareDocuments(page: PDFPage) {
       },
     }),
   ]);
+  console.log("Docs Prepared by splitting & segmenting the pdf", docs);
   return docs;
 }
