@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import ChatSideBar from "@/components/ChatSideBar";
+import PDFViewer from "@/components/PDFViewer";
 
 type Props = {
   params: {
@@ -23,6 +24,8 @@ const ChatPage = async ({ params: { chatId } }: Props) => {
   }
   if (!_chats.find((chat) => chat.id == parseInt(chatId))) return redirect("/");
 
+  const currentChat = _chats.find((chat) => chat.id === parseInt(chatId));
+
   return (
     <div className="flex max-h-screen overflow-scroll">
       <div className="flex w-full max-h-screen overflow-scroll">
@@ -32,7 +35,7 @@ const ChatPage = async ({ params: { chatId } }: Props) => {
         </div>
         {/* pdf viewer */}
         <div className="max-h-screen p-4 overflow-scroll flex-[5]">
-          {/* <PDFViewer/> */}
+          <PDFViewer pdf_url={currentChat?.pdfUrl || ""} />
         </div>
         {/* chat component */}
         <div className="flex-[3] border-l-4 border-l-slate-200 ">
