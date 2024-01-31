@@ -30,7 +30,7 @@ type PDFPage = {
 
 export async function loadS3IntoPinecone(fileKey: string) {
   // 1. Obtain pdf -> download from cloud & read pdf
-  console.log("downloading s3 into file system");
+  // console.log("downloading s3 into file system");
   const file_name = await downloadFromS3(fileKey);
   if (!file_name) {
     throw new Error("could not download from s3");
@@ -38,17 +38,17 @@ export async function loadS3IntoPinecone(fileKey: string) {
   const loader = new PDFLoader(file_name);
   const pages = (await loader.load()) as PDFPage[];
 
-  console.log("Starting step2, step1 completed");
+  // console.log("Starting step2, step1 completed");
   // 2. Split & Segment the pdf into smaller documents
   // pages = Array(13)
   const documents = await Promise.all(pages.map(prepareDocuments));
   // documents = Array(1000)
 
-  console.log("Starting step3, step2 completed");
+  // console.log("Starting step3, step2 completed");
   // 3. Vectorize & embed individual documents
   const vectors = await Promise.all(documents.flat().map(embedDocument));
 
-  console.log("Starting step4, step3 completed");
+  // console.log("Starting step4, step3 completed");
   // 4. Upload to Pinecone
   const client = await getPineconeClient();
   const pineconeIndex = client.Index("docu-query");
@@ -59,7 +59,7 @@ export async function loadS3IntoPinecone(fileKey: string) {
   // const namespace = convertToAscii(fileKey);
   const request = vectors;
   await pineconeIndex.upsert(request);
-  console.log("Vectors:", vectors);
+  // console.log("Vectors:", vectors);
   console.log("Inserted vectors into pinecone");
 
   return documents[0];
@@ -111,6 +111,6 @@ async function prepareDocuments(page: PDFPage) {
       },
     }),
   ]);
-  console.log("Docs Prepared by splitting & segmenting the pdf", docs);
+  // console.log("Docs Prepared by splitting & segmenting the pdf", docs);
   return docs;
 }
