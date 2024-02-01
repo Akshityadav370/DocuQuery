@@ -6,7 +6,7 @@ const config = new Configuration({
 
 const openai = new OpenAIApi(config);
 
-// Converts a text to vector
+// Converts a text to Vector
 export async function getEmbeddings(text: string) {
   try {
     const response = await openai.createEmbedding({
@@ -14,10 +14,10 @@ export async function getEmbeddings(text: string) {
       input: text.replace(/\n/g, " "),
     });
     const result = await response.json();
-    // console.log("vectors/embeddings from OpenAI API", result);
+    // console.log(result, "RESULT");
     return result.data[0].embedding as number[];
   } catch (error) {
-    console.log("Error calling openai embeddings api", error);
+    console.log("error calling openai embeddings api", error);
     throw error;
   }
 }
